@@ -1,0 +1,47 @@
+# ── arxiv-social-automation — requirements.txt ───────────────────────────────
+# Python 3.12 requerido (kokoro <3.13, mflux >=3.10)
+#
+# Setup limpio:
+#   deactivate
+#   rm -rf venv312
+#   python3.12 -m venv venv312
+#   source venv312/bin/activate
+#   pip install -r requirements.txt
+#
+# Sistema (brew, si no los tienes):
+#   brew install espeak-ng ffmpeg
+# ─────────────────────────────────────────────────────────────────────────────
+
+# MLX — versión pinneada para compatibilidad con mflux + mlx-lm
+# mflux 0.16.9 requiere mlx>=0.27.0,<0.31.0
+# mlx-lm 0.18+ requiere mlx>=0.18.0
+# Punto de encuentro: mlx==0.30.6
+mlx==0.30.6
+mlx-metal==0.30.6
+
+# LLM local — Qwen 2.5
+mlx-lm>=0.18.0
+
+# Imagen IA — FLUX.1-schnell local (Apple Silicon)
+# pillow 12.x requerido por mflux; moviepy funciona igual en práctica
+mflux==0.16.9
+pillow>=12.1.1
+
+# TTS local — Kokoro 82M
+kokoro>=0.9.4
+soundfile>=0.12.1
+
+# Video
+moviepy>=2.0.0
+
+# arXiv
+arxiv>=2.1.0
+
+# X / Twitter
+tweepy>=4.14.0
+
+# Utils
+python-dotenv>=1.0.0
+huggingface_hub>=0.23.0
+tqdm>=4.66.0
+requests>=2.31.0
