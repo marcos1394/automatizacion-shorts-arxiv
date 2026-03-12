@@ -5,7 +5,9 @@ arxiv-social-automation — Entry point.
 Usage:
     python main.py                          # Post thread to X
     python main.py --dry-run                # Simulate without posting
-    python main.py --shorts                 # Full pipeline: script+audio+AI images+video
+    python main.py --shorts                 # Full pipeline + auto-upload a YouTube
+    python main.py --shorts --no-upload       # Solo genera el video, no sube
+    python main.py --shorts --privacy private  # Sube como privado para revisar primero
     python main.py --shorts --no-ai-images  # Pipeline with gradient slides (faster)
     python main.py --shorts --audio-only    # Script + audio only
     python main.py --category ml            # Use cs.LG category
@@ -39,6 +41,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-ai-images", action="store_true", help="With --shorts: use gradients instead of FLUX")
     p.add_argument("--category",     default="ai", choices=["ai", "ml", "cv", "nlp", "robotics"])
     p.add_argument("--verify",       action="store_true", help="Verify X credentials")
+    p.add_argument("--no-upload",    action="store_true", help="Skip YouTube upload (solo genera el video)")
+    p.add_argument("--privacy",      default="public",  choices=["public", "private", "unlisted"])
     p.add_argument("--log-level",    default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
 
