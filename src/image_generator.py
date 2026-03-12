@@ -24,33 +24,57 @@ NEGATIVE_PROMPT = (
     "ugly, deformed, cartoon, anime"
 )
 
-PROMPTS = {
-    "title": (
-        "abstract neural network visualization, glowing purple and blue neon nodes "
-        "connected by light threads, floating geometric shapes, particles, "
-        "dark space background, ultra detailed, cinematic lighting, 8k, no text"
-    ),
-    "problem": (
-        "dark labyrinth of tangled glowing circuits and wires, amber orange neon glow, "
-        "complex interconnected nodes, chaotic energy field, dark background, "
-        "ultra detailed, 8k, cinematic, no text"
-    ),
-    "finding": (
-        "crystalline geometric structures glowing mint green and cyan, "
-        "sacred geometry patterns, particles emerging from center point, "
-        "dark deep space background, ultra detailed, 8k, no text"
-    ),
-    "impact": (
-        "futuristic cityscape aerial view, glowing amber neural pathways "
-        "overlaid on city grid, warm neon light, sense of discovery and connection, "
-        "dark background, ultra detailed, 8k, cinematic, no text"
-    ),
-    "cta": (
-        "abstract portal of light, concentric glowing rings in purple and cyan, "
-        "particles streaming inward, deep space background, sense of invitation, "
-        "ultra detailed, 8k, cinematic, no text"
-    ),
-}
+# Paletas de color rotativas — cada paper usa una diferente
+COLOR_PALETTES = [
+    ("purple and blue",  "violet indigo",    "mint green and cyan",  "amber and gold",   "purple and cyan"),
+    ("red and orange",   "crimson magenta",  "emerald and lime",     "blue and silver",  "orange and pink"),
+    ("cyan and white",   "teal and amber",   "pink and purple",      "green and yellow", "blue and white"),
+    ("gold and white",   "rose and coral",   "blue and turquoise",   "purple and mint",  "gold and orange"),
+]
+
+# Estilos visuales rotativas — varía la estética base
+VISUAL_STYLES = [
+    "biopunk organic neural tendrils",
+    "crystalline geometric low-poly",
+    "quantum particle field simulation",
+    "deep space nebula cosmic",
+    "holographic data stream matrix",
+    "fractal mathematical infinite zoom",
+]
+
+BASE_QUALITY = "ultra detailed, cinematic lighting, 8k, no text, no letters, dark background"
+
+def build_prompts(paper_title: str = "", paper_keywords: list = None,
+                   palette_idx: int = 0, style_idx: int = 0) -> dict:
+    """Build dynamic prompts unique to each paper."""
+    kw = paper_keywords or []
+    topic = " ".join(kw[:2]) if kw else "artificial intelligence"
+    palette = COLOR_PALETTES[palette_idx % len(COLOR_PALETTES)]
+    style   = VISUAL_STYLES[style_idx % len(VISUAL_STYLES)]
+    c_title, c_prob, c_find, c_impact, c_cta = palette
+
+    return {
+        "title": (
+            f"{style} visualization of {topic}, glowing {c_title} neon nodes "
+            f"connected by light threads, floating geometric shapes, particles, {BASE_QUALITY}"
+        ),
+        "problem": (
+            f"dark {style} labyrinth representing {topic} complexity, "
+            f"tangled {c_prob} glowing circuits, chaotic energy field, {BASE_QUALITY}"
+        ),
+        "finding": (
+            f"{style} crystal structures glowing {c_find}, "
+            f"sacred geometry patterns emerging from {topic} data, {BASE_QUALITY}"
+        ),
+        "impact": (
+            f"futuristic {style} cityscape with {c_impact} neural pathways "
+            f"representing {topic} breakthroughs, aerial view, {BASE_QUALITY}"
+        ),
+        "cta": (
+            f"abstract {style} portal of {c_cta} light rings, "
+            f"{topic} data streams flowing inward, sense of discovery, {BASE_QUALITY}"
+        ),
+    }
 
 
 class ImageGenerator:
@@ -115,22 +139,55 @@ class ImageGenerator:
             logger.error(f"Error generando imagen: {e}", exc_info=True)
             return None
 
-    def generate_all_backgrounds(self, output_dir: Path) -> dict[str, Path | None]:
+    def generate_all_backgrounds(self, output_dir: Path,
+                                   paper_id: str = "",
+                                   paper_title: str = "",
+                                   paper_keywords: list = None) -> dict[str, Path | None]:
         """
-        Genera un fondo por tipo de slide.
-        Usa caché si ya existen — no regenera en runs siguientes.
+        Genera 5 fondos únicos por paper.
+        - Seed derivado de arxiv_id → misma corrida produce mismas imágenes
+        - Prompts dinámicos con keywords del paper → cada Short se ve diferente
+        - Paleta y estilo visual rotan por paper → variedad visual garantizada
+        - Caché por carpeta de paper → no regenera si ya existen
         """
         output_dir.mkdir(parents=True, exist_ok=True)
-        seeds = {"title": 42, "problem": 7, "finding": 13, "impact": 99, "cta": 55}
-        results = {}
 
-        for slide_type, prompt in PROMPTS.items():
+        import hashlib
+        # Seed único por paper
+        base_seed = int(hashlib.md5(paper_id.encode()).hexdigest()[:8], 16) % 100000 if paper_id else 42
+        # Paleta y estilo varían por paper
+        palette_idx = base_seed % 4
+        style_idx   = (base_seed // 4) % 6
+        offsets = {"title": 0, "problem": 1, "finding": 2, "impact": 3, "cta": 4}
+
+        # Extraer keywords del título si no se pasan
+        if not paper_keywords and paper_title:
+            import re
+            stopwords = {"the","a","an","of","in","on","for","with","and","or",
+                         "is","are","we","our","this","that","from","to","by",
+                         "new","novel","large","model","paper","study","via","using"}
+            words = re.findall(r"[a-zA-Z]{4,}", paper_title.lower())
+            paper_keywords = [w for w in words if w not in stopwords][:4]
+
+        prompts = build_prompts(
+            paper_title=paper_title,
+            paper_keywords=paper_keywords,
+            palette_idx=palette_idx,
+            style_idx=style_idx,
+        )
+
+        logger.info(f"  Style: {VISUAL_STYLES[style_idx % len(VISUAL_STYLES)]}")
+        logger.info(f"  Palette: {COLOR_PALETTES[palette_idx % len(COLOR_PALETTES)][0]}")
+
+        results = {}
+        for slide_type, prompt in prompts.items():
             path = output_dir / f"bg_{slide_type}.png"
+            seed = base_seed + offsets[slide_type]
             if path.exists():
                 logger.info(f"  Caché: bg_{slide_type}.png")
                 results[slide_type] = path
             else:
-                results[slide_type] = self.generate(prompt, path, seed=seeds[slide_type])
+                results[slide_type] = self.generate(prompt, path, seed=seed)
 
         return results
 

@@ -141,8 +141,21 @@ def run_shorts_pipeline(args) -> bool:
                 pass
             try:
                 from src.image_generator import ImageGenerator
+                # Extraer keywords del título para prompts únicos
+                import re
+                stopwords = {"the","a","an","of","in","on","for","with","and","or",
+                             "is","are","we","our","via","using","based","towards",
+                             "new","novel","large","model","paper","study"}
+                kw = [w for w in re.findall(r'\b[a-zA-Z]{4,}\b', paper.title.lower())
+                      if w not in stopwords][:5]
+
                 ig = ImageGenerator()
-                backgrounds = ig.generate_all_backgrounds(slides_dir / "backgrounds")
+                backgrounds = ig.generate_all_backgrounds(
+                    slides_dir / "backgrounds",
+                    paper_id=paper.arxiv_id,
+                    paper_title=paper.title,
+                    paper_keywords=kw,
+                )
                 logger.info("AI backgrounds ready.")
             except Exception as e:
                 logger.warning(f"FLUX failed ({e}), falling back to gradients.")
